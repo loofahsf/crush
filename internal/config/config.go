@@ -3,10 +3,8 @@ package config
 import (
 	"cmp"
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
-	"maps"
 	"net/http"
 	"net/url"
 	"slices"
@@ -17,7 +15,6 @@ import (
 	"github.com/charmbracelet/crush/internal/csync"
 	"github.com/charmbracelet/crush/internal/env"
 	"github.com/charmbracelet/crush/internal/oauth"
-	"github.com/charmbracelet/crush/internal/oauth/copilot"
 	"github.com/invopop/jsonschema"
 )
 
@@ -97,7 +94,7 @@ type ProviderConfig struct {
 	// The provider's API endpoint.
 	BaseURL string `json:"base_url,omitempty" jsonschema:"description=Base URL for the provider's API,format=uri,example=https://api.openai.com/v1"`
 	// The provider type, e.g. "openai", "anthropic", etc. if empty it defaults to openai.
-	Type catwalk.Type `json:"type,omitempty" jsonschema:"description=Provider type that determines the API format,enum=openai,enum=openai-compat,enum=anthropic,enum=gemini,enum=azure,enum=vertexai,default=openai"`
+	Type catwalk.Type `json:"type,omitempty" jsonschema:"description=Provider type that determines the API format,enum=openai,enum=openai-compat,enum=anthropic,enum=gemini,default=openai"`
 	// The provider's API key.
 	APIKey string `json:"api_key,omitempty" jsonschema:"description=API key for authentication with the provider,example=$OPENAI_API_KEY"`
 	// The original API key template before resolution (for re-resolution on auth errors).
@@ -152,10 +149,6 @@ func (c *ProviderConfig) ToProvider() catwalk.Provider {
 	}
 
 	return provider
-}
-
-func (c *ProviderConfig) SetupGitHubCopilot() {
-	maps.Copy(c.ExtraHeaders, copilot.Headers())
 }
 
 type MCPType string
@@ -587,20 +580,6 @@ func (c *ProviderConfig) TestConnection(resolver VariableResolver) error {
 		baseURL, _ := resolver.ResolveValue(c.BaseURL)
 		baseURL = cmp.Or(baseURL, "https://generativelanguage.googleapis.com")
 		testURL = baseURL + "/v1beta/models?key=" + url.QueryEscape(apiKey)
-	case catwalk.TypeBedrock:
-		// NOTE: Bedrock has a `/foundation-models` endpoint that we could in
-		// theory use, but apparently the authorization is region-specific,
-		// so it's not so trivial.
-		if strings.HasPrefix(apiKey, "ABSK") { // Bedrock API keys
-			return nil
-		}
-		return errors.New("not a valid bedrock api key")
-	case catwalk.TypeVercel:
-		// NOTE: Vercel does not validate API keys on the `/models` endpoint.
-		if strings.HasPrefix(apiKey, "vck_") { // Vercel API keys
-			return nil
-		}
-		return errors.New("not a valid vercel api key")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

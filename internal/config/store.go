@@ -10,11 +10,8 @@ import (
 	"slices"
 
 	"charm.land/catwalk/pkg/catwalk"
-	hyperp "github.com/charmbracelet/crush/internal/agent/hyper"
 	"github.com/charmbracelet/crush/internal/env"
 	"github.com/charmbracelet/crush/internal/oauth"
-	"github.com/charmbracelet/crush/internal/oauth/copilot"
-	"github.com/charmbracelet/crush/internal/oauth/hyper"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -246,10 +243,6 @@ func (s *ConfigStore) SetProviderAPIKey(scope Scope, providerID string, apiKey a
 		setKeyOrToken = func() {
 			providerConfig.APIKey = v.AccessToken
 			providerConfig.OAuthToken = v
-			switch providerID {
-			case string(catwalk.InferenceProviderCopilot):
-				providerConfig.SetupGitHubCopilot()
-			}
 		}
 	}
 
@@ -301,10 +294,6 @@ func (s *ConfigStore) RefreshOAuthToken(ctx context.Context, scope Scope, provid
 	var newToken *oauth.Token
 	var refreshErr error
 	switch providerID {
-	case string(catwalk.InferenceProviderCopilot):
-		newToken, refreshErr = copilot.RefreshToken(ctx, providerConfig.OAuthToken.RefreshToken)
-	case hyperp.Name:
-		newToken, refreshErr = hyper.ExchangeToken(ctx, providerConfig.OAuthToken.RefreshToken)
 	default:
 		return fmt.Errorf("OAuth refresh not supported for provider %s", providerID)
 	}
@@ -315,11 +304,6 @@ func (s *ConfigStore) RefreshOAuthToken(ctx context.Context, scope Scope, provid
 	slog.Info("Successfully refreshed OAuth token", "provider", providerID)
 	providerConfig.OAuthToken = newToken
 	providerConfig.APIKey = newToken.AccessToken
-
-	switch providerID {
-	case string(catwalk.InferenceProviderCopilot):
-		providerConfig.SetupGitHubCopilot()
-	}
 
 	s.config.Providers.Set(providerID, providerConfig)
 
@@ -381,39 +365,6 @@ func NewTestStore(cfg *Config, loadedPaths ...string) *ConfigStore {
 		config:      cfg,
 		loadedPaths: loadedPaths,
 	}
-}
-
-// ImportCopilot attempts to import a GitHub Copilot token from disk.
-func (s *ConfigStore) ImportCopilot() (*oauth.Token, bool) {
-	if s.HasConfigField(ScopeGlobal, "providers.copilot.api_key") || s.HasConfigField(ScopeGlobal, "providers.copilot.oauth") {
-		return nil, false
-	}
-
-	diskToken, hasDiskToken := copilot.RefreshTokenFromDisk()
-	if !hasDiskToken {
-		return nil, false
-	}
-
-	slog.Info("Found existing GitHub Copilot token on disk. Authenticating...")
-	token, err := copilot.RefreshToken(context.TODO(), diskToken)
-	if err != nil {
-		slog.Error("Unable to import GitHub Copilot token", "error", err)
-		return nil, false
-	}
-
-	if err := s.SetProviderAPIKey(ScopeGlobal, string(catwalk.InferenceProviderCopilot), token); err != nil {
-		return token, false
-	}
-
-	if err := cmp.Or(
-		s.SetConfigField(ScopeGlobal, "providers.copilot.api_key", token.AccessToken),
-		s.SetConfigField(ScopeGlobal, "providers.copilot.oauth", token),
-	); err != nil {
-		slog.Error("Unable to save GitHub Copilot token to disk", "error", err)
-	}
-
-	slog.Info("GitHub Copilot successfully imported")
-	return token, true
 }
 
 // StalenessResult contains the result of a staleness check.

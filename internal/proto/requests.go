@@ -41,12 +41,6 @@ type ConfigRefreshOAuthRequest struct {
 	ProviderID string       `json:"provider_id"`
 }
 
-// ImportCopilotResponse represents the response from importing Copilot credentials.
-type ImportCopilotResponse struct {
-	Token   any  `json:"token"`
-	Success bool `json:"success"`
-}
-
 // ProjectNeedsInitResponse represents whether a project needs initialization.
 type ProjectNeedsInitResponse struct {
 	NeedsInit bool `json:"needs_init"`

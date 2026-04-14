@@ -9,7 +9,6 @@ import (
 	mcptools "github.com/charmbracelet/crush/internal/agent/tools/mcp"
 	"github.com/charmbracelet/crush/internal/commands"
 	"github.com/charmbracelet/crush/internal/config"
-	"github.com/charmbracelet/crush/internal/oauth"
 )
 
 // MCPResourceContents holds the contents of an MCP resource returned
@@ -67,16 +66,6 @@ func (b *Backend) SetProviderAPIKey(workspaceID string, scope config.Scope, prov
 		return err
 	}
 	return ws.Cfg.SetProviderAPIKey(scope, providerID, apiKey)
-}
-
-// ImportCopilot attempts to import a GitHub Copilot token from disk.
-func (b *Backend) ImportCopilot(workspaceID string) (*oauth.Token, bool, error) {
-	ws, err := b.GetWorkspace(workspaceID)
-	if err != nil {
-		return nil, false, err
-	}
-	token, ok := ws.Cfg.ImportCopilot()
-	return token, ok, nil
 }
 
 // RefreshOAuthToken refreshes the OAuth token for a provider.

@@ -152,26 +152,6 @@ func (c *controllerV1) handlePostWorkspaceConfigProviderKey(w http.ResponseWrite
 	w.WriteHeader(http.StatusOK)
 }
 
-// handlePostWorkspaceConfigImportCopilot imports Copilot credentials.
-//
-//	@Summary		Import Copilot credentials
-//	@Tags			config
-//	@Produce		json
-//	@Param			id	path		string						true	"Workspace ID"
-//	@Success		200	{object}	proto.ImportCopilotResponse
-//	@Failure		404	{object}	proto.Error
-//	@Failure		500	{object}	proto.Error
-//	@Router			/workspaces/{id}/config/import-copilot [post]
-func (c *controllerV1) handlePostWorkspaceConfigImportCopilot(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	token, ok, err := c.backend.ImportCopilot(id)
-	if err != nil {
-		c.handleError(w, r, err)
-		return
-	}
-	jsonEncode(w, proto.ImportCopilotResponse{Token: token, Success: ok})
-}
-
 // handlePostWorkspaceConfigRefreshOAuth refreshes an OAuth token for a provider.
 //
 //	@Summary		Refresh OAuth token
