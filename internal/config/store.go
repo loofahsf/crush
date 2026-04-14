@@ -281,40 +281,8 @@ func (s *ConfigStore) SetProviderAPIKey(scope Scope, providerID string, apiKey a
 }
 
 // RefreshOAuthToken refreshes the OAuth token for the given provider.
-func (s *ConfigStore) RefreshOAuthToken(ctx context.Context, scope Scope, providerID string) error {
-	providerConfig, exists := s.config.Providers.Get(providerID)
-	if !exists {
-		return fmt.Errorf("provider %s not found", providerID)
-	}
-
-	if providerConfig.OAuthToken == nil {
-		return fmt.Errorf("provider %s does not have an OAuth token", providerID)
-	}
-
-	var newToken *oauth.Token
-	var refreshErr error
-	switch providerID {
-	default:
-		return fmt.Errorf("OAuth refresh not supported for provider %s", providerID)
-	}
-	if refreshErr != nil {
-		return fmt.Errorf("failed to refresh OAuth token for provider %s: %w", providerID, refreshErr)
-	}
-
-	slog.Info("Successfully refreshed OAuth token", "provider", providerID)
-	providerConfig.OAuthToken = newToken
-	providerConfig.APIKey = newToken.AccessToken
-
-	s.config.Providers.Set(providerID, providerConfig)
-
-	if err := cmp.Or(
-		s.SetConfigField(scope, fmt.Sprintf("providers.%s.api_key", providerID), newToken.AccessToken),
-		s.SetConfigField(scope, fmt.Sprintf("providers.%s.oauth", providerID), newToken),
-	); err != nil {
-		return fmt.Errorf("failed to persist refreshed token: %w", err)
-	}
-
-	return nil
+func (s *ConfigStore) RefreshOAuthToken(_ context.Context, _ Scope, providerID string) error {
+	return fmt.Errorf("OAuth refresh not supported for provider %s", providerID)
 }
 
 // recordRecentModel records a model in the recent models list.
