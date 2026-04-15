@@ -17,7 +17,6 @@ import (
 	"github.com/charmbracelet/crush/internal/log"
 	"github.com/charmbracelet/crush/internal/lsp"
 	"github.com/charmbracelet/crush/internal/message"
-	"github.com/charmbracelet/crush/internal/oauth"
 	"github.com/charmbracelet/crush/internal/permission"
 	"github.com/charmbracelet/crush/internal/proto"
 	"github.com/charmbracelet/crush/internal/pubsub"
@@ -437,17 +436,6 @@ func (w *ClientWorkspace) RemoveConfigField(scope config.Scope, key string) erro
 		w.refreshWorkspace()
 	}
 	return err
-}
-
-func (w *ClientWorkspace) ImportCopilot() (*oauth.Token, bool) {
-	token, ok, err := w.client.ImportCopilot(context.Background(), w.workspaceID())
-	if err != nil {
-		return nil, false
-	}
-	if ok {
-		w.refreshWorkspace()
-	}
-	return token, ok
 }
 
 func (w *ClientWorkspace) RefreshOAuthToken(ctx context.Context, scope config.Scope, providerID string) error {

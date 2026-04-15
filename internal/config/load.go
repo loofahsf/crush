@@ -14,10 +14,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"testing"
 
 	"charm.land/catwalk/pkg/catwalk"
-	"github.com/charmbracelet/crush/internal/agent/hyper"
 	"github.com/charmbracelet/crush/internal/csync"
 	"github.com/charmbracelet/crush/internal/env"
 	"github.com/charmbracelet/crush/internal/fsext"
@@ -247,68 +245,9 @@ func (c *Config) configureProviders(store *ConfigStore, env env.Env, resolver Va
 			}
 			c.Providers.Del(string(p.ID))
 			continue
-		case p.ID == catwalk.InferenceProviderCopilot && config.OAuthToken != nil:
-			prepared.SetupGitHubCopilot()
 		}
 
 		switch p.ID {
-		// Handle specific providers that require additional configuration
-		case catwalk.InferenceProviderVertexAI:
-			var (
-				project  = env.Get("VERTEXAI_PROJECT")
-				location = env.Get("VERTEXAI_LOCATION")
-			)
-			if project == "" || location == "" {
-				if configExists {
-					slog.Warn("Skipping Vertex AI provider due to missing credentials")
-					c.Providers.Del(string(p.ID))
-				}
-				continue
-			}
-			prepared.ExtraParams["project"] = project
-			prepared.ExtraParams["location"] = location
-		case catwalk.InferenceProviderAzure:
-			endpoint, err := resolver.ResolveValue(p.APIEndpoint)
-			if err != nil || endpoint == "" {
-				if configExists {
-					slog.Warn("Skipping Azure provider due to missing API endpoint", "provider", p.ID, "error", err)
-					c.Providers.Del(string(p.ID))
-				}
-				continue
-			}
-			prepared.BaseURL = endpoint
-			prepared.ExtraParams["apiVersion"] = env.Get("AZURE_OPENAI_API_VERSION")
-		case catwalk.InferenceProviderBedrock:
-			if !hasAWSCredentials(env) {
-				if configExists {
-					slog.Warn("Skipping Bedrock provider due to missing AWS credentials")
-					c.Providers.Del(string(p.ID))
-				}
-				continue
-			}
-			prepared.ExtraParams["region"] = env.Get("AWS_REGION")
-			if prepared.ExtraParams["region"] == "" {
-				prepared.ExtraParams["region"] = env.Get("AWS_DEFAULT_REGION")
-			}
-			for _, model := range p.Models {
-				if !strings.HasPrefix(model.ID, "anthropic.") {
-					return fmt.Errorf("bedrock provider only supports anthropic models for now, found: %s", model.ID)
-				}
-			}
-		case catwalk.InferenceProvider("hyper"):
-			if apiKey := env.Get("HYPER_API_KEY"); apiKey != "" {
-				prepared.APIKey = apiKey
-				prepared.APIKeyTemplate = apiKey
-			} else {
-				v, err := resolver.ResolveValue(p.APIKey)
-				if v == "" || err != nil {
-					if configExists {
-						slog.Warn("Skipping Hyper provider due to missing API key", "provider", p.ID)
-						c.Providers.Del(string(p.ID))
-					}
-					continue
-				}
-			}
 		default:
 			// if the provider api or endpoint are missing we skip them
 			v, err := resolver.ResolveValue(p.APIKey)
@@ -334,7 +273,7 @@ func (c *Config) configureProviders(store *ConfigStore, env env.Env, resolver Va
 		providerConfig.Name = cmp.Or(providerConfig.Name, id) // Use ID as name if not set
 		// default to OpenAI if not set
 		providerConfig.Type = cmp.Or(providerConfig.Type, catwalk.TypeOpenAICompat)
-		if !slices.Contains(catwalk.KnownProviderTypes(), providerConfig.Type) && providerConfig.Type != hyper.Name {
+		if !slices.Contains(catwalk.KnownProviderTypes(), providerConfig.Type) {
 			slog.Warn("Skipping custom provider due to unsupported provider type", "provider", id)
 			c.Providers.Del(id)
 			continue
@@ -737,35 +676,6 @@ func loadFromBytes(configs [][]byte) (*Config, error) {
 		return nil, err
 	}
 	return &config, nil
-}
-
-func hasAWSCredentials(env env.Env) bool {
-	if env.Get("AWS_BEARER_TOKEN_BEDROCK") != "" {
-		return true
-	}
-
-	if env.Get("AWS_ACCESS_KEY_ID") != "" && env.Get("AWS_SECRET_ACCESS_KEY") != "" {
-		return true
-	}
-
-	if env.Get("AWS_PROFILE") != "" || env.Get("AWS_DEFAULT_PROFILE") != "" {
-		return true
-	}
-
-	if env.Get("AWS_REGION") != "" || env.Get("AWS_DEFAULT_REGION") != "" {
-		return true
-	}
-
-	if env.Get("AWS_CONTAINER_CREDENTIALS_RELATIVE_URI") != "" ||
-		env.Get("AWS_CONTAINER_CREDENTIALS_FULL_URI") != "" {
-		return true
-	}
-
-	if _, err := os.Stat(filepath.Join(home.Dir(), ".aws/credentials")); err == nil && !testing.Testing() {
-		return true
-	}
-
-	return false
 }
 
 // GlobalConfig returns the global configuration file path for the application.

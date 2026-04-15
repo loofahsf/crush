@@ -15,7 +15,6 @@ import (
 	"github.com/charmbracelet/crush/internal/history"
 	"github.com/charmbracelet/crush/internal/lsp"
 	"github.com/charmbracelet/crush/internal/message"
-	"github.com/charmbracelet/crush/internal/oauth"
 	"github.com/charmbracelet/crush/internal/permission"
 	"github.com/charmbracelet/crush/internal/session"
 )
@@ -274,10 +273,6 @@ func (w *AppWorkspace) SetConfigField(scope config.Scope, key string, value any)
 
 func (w *AppWorkspace) RemoveConfigField(scope config.Scope, key string) error {
 	return w.store.RemoveConfigField(scope, key)
-}
-
-func (w *AppWorkspace) ImportCopilot() (*oauth.Token, bool) {
-	return w.store.ImportCopilot()
 }
 
 func (w *AppWorkspace) RefreshOAuthToken(ctx context.Context, scope config.Scope, providerID string) error {

@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/charmbracelet/crush/internal/config"
-	"github.com/charmbracelet/crush/internal/oauth"
 )
 
 // SetConfigField sets a config key/value pair on the server.
@@ -91,27 +90,6 @@ func (c *Client) SetProviderAPIKey(ctx context.Context, id string, scope config.
 		return fmt.Errorf("failed to set provider API key: status code %d", rsp.StatusCode)
 	}
 	return nil
-}
-
-// ImportCopilot attempts to import a GitHub Copilot token on the
-// server.
-func (c *Client) ImportCopilot(ctx context.Context, id string) (*oauth.Token, bool, error) {
-	rsp, err := c.post(ctx, fmt.Sprintf("/workspaces/%s/config/import-copilot", id), nil, nil, nil)
-	if err != nil {
-		return nil, false, fmt.Errorf("failed to import copilot: %w", err)
-	}
-	defer rsp.Body.Close()
-	if rsp.StatusCode != http.StatusOK {
-		return nil, false, fmt.Errorf("failed to import copilot: status code %d", rsp.StatusCode)
-	}
-	var result struct {
-		Token   *oauth.Token `json:"token"`
-		Success bool         `json:"success"`
-	}
-	if err := json.NewDecoder(rsp.Body).Decode(&result); err != nil {
-		return nil, false, fmt.Errorf("failed to decode import copilot response: %w", err)
-	}
-	return result.Token, result.Success, nil
 }
 
 // RefreshOAuthToken refreshes an OAuth token for a provider on the

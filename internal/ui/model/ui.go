@@ -1428,14 +1428,8 @@ func (m *UI) handleDialogMsg(msg tea.Msg) tea.Cmd {
 
 		var (
 			providerID   = msg.Model.Provider
-			isCopilot    = providerID == string(catwalk.InferenceProviderCopilot)
 			isConfigured = func() bool { _, ok := cfg.Providers.Get(providerID); return ok }
 		)
-
-		// Attempt to import GitHub Copilot tokens from VSCode if available.
-		if isCopilot && !isConfigured() && !msg.ReAuthenticate {
-			m.com.Workspace.ImportCopilot()
-		}
 
 		if !isConfigured() || msg.ReAuthenticate {
 			m.dialog.CloseDialog(dialog.ModelsID)
@@ -1588,14 +1582,7 @@ func (m *UI) openAuthenticationDialog(provider catwalk.Provider, model config.Se
 		isOnboarding = m.state == uiOnboarding
 	)
 
-	switch provider.ID {
-	case "hyper":
-		dlg, cmd = dialog.NewOAuthHyper(m.com, isOnboarding, provider, model, modelType)
-	case catwalk.InferenceProviderCopilot:
-		dlg, cmd = dialog.NewOAuthCopilot(m.com, isOnboarding, provider, model, modelType)
-	default:
-		dlg, cmd = dialog.NewAPIKeyInput(m.com, isOnboarding, provider, model, modelType)
-	}
+	dlg, cmd = dialog.NewAPIKeyInput(m.com, isOnboarding, provider, model, modelType)
 
 	if m.dialog.ContainsDialog(dlg.ID()) {
 		m.dialog.BringToFront(dlg.ID())
